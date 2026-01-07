@@ -1,4 +1,3 @@
-pub mod indices;
-pub mod shape;
+pub mod dim;
 pub mod tuple;
-pub mod stride;
+pub mod shape;
