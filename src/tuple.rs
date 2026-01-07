@@ -51,6 +51,10 @@ impl fmt::Display for Tuple {
     }
 }
 
+pub type Stride = Tuple;
+
+pub type Indices = Tuple;
+
 #[cfg(test)]
 mod tests {
     use super::*;
