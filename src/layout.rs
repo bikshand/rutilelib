@@ -1,11 +1,13 @@
 use crate::shape::Shape;
 use crate::tuple::Tuple;
+use crate::tuple::Stride;
 
 /// Layout = mapping from coordinates → linear index
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Layout {
     shape: Shape,
     stride: Tuple,
+    contig: bool,
 }
 
 /// Layout policy trait
@@ -19,10 +21,22 @@ pub struct RowMajor;
 /// Column-major policy
 pub struct ColMajor;
 
+fn is_layout_contig(shape: Shape, stride: Stride) -> bool {
+    let mut expected_stride = 1;
+    let flat_shape_vec = shape.dims.flatten();
+    for (dim, s) in stride.flatten().into_iter().rev().enumerate() {
+        if s != expected_stride {
+            return false;
+        }
+        expected_stride *= flat_shape_vec[flat_shape_vec.len()-1 - dim];
+    }
+    true
+}
+
 impl Layout {
     pub fn new<P: LayoutPolicy>(shape: Shape) -> Self {
         let stride = P::make_stride(&shape);
-        Self { shape, stride }
+        Self { shape, stride, contig : true }
     }
 
     pub fn row_major(shape: Shape) -> Self {
@@ -71,6 +85,10 @@ impl Layout {
         recur(&self.shape.dims, &self.stride)
     }
 
+    pub fn is_contiguous(&self) -> bool {
+        self.contig
+    }
+
     pub fn crd2idx(&self, crd: &Tuple) -> usize {
         crd.dot(&self.stride)
     }
@@ -106,8 +124,9 @@ impl Layout {
 
 impl Layout {
     /// Create a new layout from shape + stride (used for subviews)
-    pub(crate) fn with_shape_stride(shape: Shape, stride: Tuple) -> Self {
-        Layout { shape, stride }
+    pub(crate) fn with_shape_stride(shape: Shape, stride: Stride) -> Self {
+        let is_contiguous = is_layout_contig(shape.clone(), stride.clone());
+        Layout { shape, stride, contig : is_contiguous }
     }
 }
 

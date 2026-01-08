@@ -31,6 +31,16 @@ impl Tuple {
         }
     }
 
+    /// Number of flattened elements
+    pub fn flat_len(&self) -> usize {
+        self.flatten().len()
+    }
+
+    /// Access the i-th element in flattened form
+    pub fn flat_at(&self, i: usize) -> usize {
+        self.flatten()[i]
+    }
+
     /// Depth of the tuple
     pub fn depth(&self) -> usize {
         match self {
