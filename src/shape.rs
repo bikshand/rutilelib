@@ -28,6 +28,13 @@ impl Shape {
     pub fn depth(&self) -> usize {
         self.dims.depth()
     }
+
+    /// Hierarchical get
+    pub fn get(&self, index: usize) -> Shape {
+        Shape {
+            dims: self.dims.get(index),
+        }
+    }
 }
 
 impl std::fmt::Display for Shape {
@@ -44,8 +51,8 @@ mod tests {
     #[test]
     fn shape_flat() {
         let s = Shape::new(Tuple::tup(vec![
-            Tuple::int(4),
-            Tuple::int(5),
+            Tuple::int1(4),
+            Tuple::int1(5),
         ]));
 
         assert_eq!(s.size(), 20);
@@ -57,14 +64,33 @@ mod tests {
     #[test]
     fn shape_hierarchical() {
         let s = Shape::new(Tuple::tup(vec![
-            Tuple::int(2),
-            Tuple::tup(vec![Tuple::int(3), Tuple::int(4)]),
+            Tuple::int1(2),
+            Tuple::tup(vec![Tuple::int1(3), Tuple::int1(4)]),
         ]));
 
         assert_eq!(s.size(), 24);
         assert_eq!(s.rank(), 2);
         assert_eq!(s.depth(), 2);
         assert_eq!(s.to_string(), "(2,(3,4))");
+    }
+
+    #[test]
+    fn shape_get() {
+        let s = Shape::new(Tuple::tup(vec![
+            Tuple::int1(2),
+            Tuple::int1(3),
+            Tuple::tup(vec![Tuple::int1(4), Tuple::int1(2)]),
+        ]));
+
+        let s1 = s.get(1);
+        assert_eq!(s1.size(), 3);
+        assert_eq!(s1.rank(), 1);
+        assert_eq!(s1.to_string(), "3");
+
+        let s1 = s.get(2);
+        assert_eq!(s1.size(), 8);
+        assert_eq!(s1.rank(), 2);
+        assert_eq!(s1.to_string(), "(4,2)");
     }
 }
 
