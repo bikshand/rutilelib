@@ -6,3 +6,5 @@ pub mod layout_algebra;
 pub mod tensor;
 
 pub mod copy;
+pub mod gemm;
+pub mod blas;

@@ -23,6 +23,15 @@ impl Shape {
             Tuple::Tup(v) => v.len(),
         }
     }
+    
+    pub fn flat_at(&self, i: usize) -> usize {
+          self.dims.flat_at(i)
+    }
+
+    pub fn flat_len(&self) -> usize {
+          self.dims.flat_len()
+    }
+
 
     /// Depth of hierarchy
     pub fn depth(&self) -> usize {

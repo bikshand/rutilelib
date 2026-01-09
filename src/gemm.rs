@@ -1,45 +1,19 @@
 
-use crate::tensor::{TensorView, TensorViewMut};
+use crate::tensor::{Tensor, TensorView, TensorViewMut};
 use crate::layout::Layout;
-
-/* ============================================================
-   BLAS ABI
-   ============================================================ */
-
-#[derive(Copy, Clone, Debug)]
-pub enum BlasTranspose {
-    NoTrans,
-    Trans,
-}
-
-pub trait BlasBackend {
-    fn gemm_f32(
-        &self,
-        trans_a: BlasTranspose,
-        trans_b: BlasTranspose,
-        m: i32,
-        n: i32,
-        k: i32,
-        alpha: f32,
-        a: *const f32,
-        lda: i32,
-        b: *const f32,
-        ldb: i32,
-        beta: f32,
-        c: *mut f32,
-        ldc: i32,
-    );
-}
+use crate::shape::Shape;
+use crate::tuple::Tuple;
+use crate::blas::*;
 
 /* ============================================================
    Layout → BLAS lowering
    ============================================================ */
 
 fn lower_matrix(layout: &Layout) -> (i32, BlasTranspose) {
-    assert_eq!(layout.shape().ndim(), 2);
+    assert_eq!(layout.shape().flat_len(), 2);
 
-    let s0 = layout.stride().at(0);
-    let s1 = layout.stride().at(1);
+    let s0 = layout.stride().flat_at(0);
+    let s1 = layout.stride().flat_at(1);
 
     // Row-major: [i][j] → j is contiguous
     if s1 == 1 {
@@ -70,17 +44,17 @@ pub fn gemm_f32<B: BlasBackend>(
 
     /* ---------- shape checks ---------- */
 
-    assert_eq!(la.shape().ndim(), 2);
-    assert_eq!(lb.shape().ndim(), 2);
-    assert_eq!(lc.shape().ndim(), 2);
+    assert_eq!(la.shape().flat_len(), 2);
+    assert_eq!(lb.shape().flat_len(), 2);
+    assert_eq!(lc.shape().flat_len(), 2);
 
-    let m = la.shape().at(0) as i32;
-    let k = la.shape().at(1) as i32;
-    let n = lb.shape().at(1) as i32;
+    let m = la.shape().flat_at(0) as i32;
+    let k = la.shape().flat_at(1) as i32;
+    let n = lb.shape().flat_at(1) as i32;
 
-    assert_eq!(lb.shape().at(0) as i32, k);
-    assert_eq!(lc.shape().at(0) as i32, m);
-    assert_eq!(lc.shape().at(1) as i32, n);
+    assert_eq!(lb.shape().flat_at(0) as i32, k);
+    assert_eq!(lc.shape().flat_at(0) as i32, m);
+    assert_eq!(lc.shape().flat_at(1) as i32, n);
 
     /* ---------- layout checks ---------- */
 
@@ -92,7 +66,7 @@ pub fn gemm_f32<B: BlasBackend>(
 
     let (lda, ta) = lower_matrix(la);
     let (ldb, tb) = lower_matrix(lb);
-    let ldc = lc.stride().at(0) as i32;
+    let ldc = lc.stride().flat_at(0) as i32;
 
     unsafe {
         backend.gemm_f32(
@@ -120,7 +94,10 @@ pub fn gemm_f32<B: BlasBackend>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Tensor, Layout, Shape, Tuple};
+    use crate::tensor::Tensor;
+    use crate::layout::Layout;
+    use crate::shape::Shape;
+    use crate::tuple::Tuple;
 
     struct MockBlas;
 
@@ -153,7 +130,7 @@ mod tests {
 
     #[test]
     fn gemm_dispatch_only() {
-        let shape = Shape::new(Tuple::from_vec(vec![2, 2]));
+        let shape = Shape::new(Tuple::int(vec![2, 2]));
 
         let a = Tensor::new(
             vec![1.0, 2.0, 3.0, 4.0],
@@ -173,6 +150,44 @@ mod tests {
         let backend = MockBlas;
 
         gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut());
+    }
+}
+
+
+#[test]
+fn gemm_2x2_row_major_correctness() {
+    let shape = Shape::new(Tuple::int(vec![2, 2]));
+
+    let a = Tensor::new(
+        vec![1.0, 2.0,
+             3.0, 4.0],
+        Layout::row_major(shape.clone()),
+    );
+
+    let b = Tensor::new(
+        vec![5.0, 6.0,
+             7.0, 8.0],
+        Layout::row_major(shape.clone()),
+    );
+
+    let mut c = Tensor::new(
+        vec![0.0; 4],
+        Layout::row_major(shape),
+    );
+
+    let backend = GenericBlas;
+
+    gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut());
+
+    // Expected:
+    // [ 1*5 + 2*7 , 1*6 + 2*8 ]
+    // [ 3*5 + 4*7 , 3*6 + 4*8 ]
+    let expected = vec![19.0, 22.0, 43.0, 50.0];
+
+    unsafe {
+        for i in 0..4 {
+            assert_eq!(*c.as_view().ptr.as_ptr().add(i), expected[i]);
+        }
     }
 }
 
