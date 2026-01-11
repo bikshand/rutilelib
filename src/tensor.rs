@@ -30,6 +30,7 @@ impl<T> Tensor<T> {
         }
     }
 
+
     pub fn as_view_mut(&mut self) -> TensorViewMut<'_, T> {
         TensorViewMut {
             ptr: unsafe { NonNull::new_unchecked(self.data.as_mut_ptr()) },
@@ -61,6 +62,16 @@ impl<'a, T> TensorView<'a, T> {
     pub unsafe fn get(&self, crd: &Tuple) -> &'a T {
         let idx = self.layout.crd2idx(crd);
         &*self.ptr.as_ptr().add(idx)
+    }
+
+    #[inline]
+    pub fn as_ptr(&self) -> *const T {
+        self.ptr.as_ptr()
+    }
+
+    #[inline]
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.ptr.as_ptr()
     }
 
     /* ---------- N-D subview ---------- */

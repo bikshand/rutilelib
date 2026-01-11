@@ -5,6 +5,33 @@ use crate::shape::Shape;
 use crate::tuple::Tuple;
 use crate::blas::*;
 
+/// Compare two contiguous buffers with a tolerance `eps`.
+/// Panics if any element differs more than `eps`.
+///
+/// # Safety
+/// Both `actual_ptr` and `expected_ptr` must point to at least `size` valid `f32` elements.
+pub unsafe fn assert_close_f32(
+    size: usize,
+    actual_ptr: *const f32,
+    expected_ptr: *const f32,
+    eps: f32,
+) {
+    for i in 0..size {
+        let actual = *actual_ptr.add(i);
+        let expected = *expected_ptr.add(i);
+
+        assert!(
+            (actual - expected).abs() <= eps,
+            "Mismatch at index {}: got {}, expected {}, tolerance {}",
+            i,
+            actual,
+            expected,
+            eps
+        );
+    }
+}
+
+
 /* ============================================================
    Layout → BLAS lowering
    ============================================================ */
@@ -190,4 +217,58 @@ fn gemm_2x2_row_major_correctness() {
         }
     }
 }
+
+#[cfg(test)]
+mod randomized_gemm {
+    use super::*;
+    use crate::tensor::Tensor;
+    use crate::layout::Layout;
+    use crate::shape::Shape;
+    use crate::tuple::Tuple;
+    use rand::Rng;
+
+    #[test]
+    fn gemm_randomized() {
+        let mut rng = rand::thread_rng();
+
+        // Random sizes
+        let m = rng.gen_range(2..10);
+        let k = rng.gen_range(2..10);
+        let n = rng.gen_range(2..10);
+
+        let a_shape = Shape::new(Tuple::int(vec![m, k]));
+        let b_shape = Shape::new(Tuple::int(vec![k, n]));
+        let c_shape = Shape::new(Tuple::int(vec![m, n]));
+
+        let a_data: Vec<f32> = (0..(m*k)).map(|_| rng.gen_range(-10.0..10.0)).collect();
+        let b_data: Vec<f32> = (0..(k*n)).map(|_| rng.gen_range(-10.0..10.0)).collect();
+        let mut c_data: Vec<f32> = vec![0.0; m*n];
+
+        let a = Tensor::new(a_data.clone(), Layout::row_major(a_shape));
+        let b = Tensor::new(b_data.clone(), Layout::row_major(b_shape));
+        let mut c = Tensor::new(c_data.clone(), Layout::row_major(c_shape));
+
+        let backend = GenericBlas;
+        gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut());
+
+        // Reference computation in Rust
+        let mut expected = vec![0.0; (m*n) as usize];
+        for i in 0..m {
+            for j in 0..n {
+                let mut sum = 0.0;
+                for p in 0..k {
+                    sum += a_data[i*k + p] * b_data[p*n + j];
+                }
+                expected[i*n + j] = sum;
+            }
+        }
+
+        unsafe {
+            for i in 0..m*n {
+                assert_close_f32(m*n, c.as_view().ptr.as_ptr(), expected.as_ptr(), 1e-3);
+            } 
+        }
+    }
+}
+
 

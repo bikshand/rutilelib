@@ -1,6 +1,8 @@
 use crate::shape::Shape;
 use crate::tuple::Tuple;
 use crate::tuple::Stride;
+use crate::layout_iter::{LayoutIterator};
+use crate::layout_algebra::{flat_divide};
 
 /// Layout = mapping from coordinates → linear index
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,6 +130,39 @@ impl Layout {
         let is_contiguous = is_layout_contig(shape.clone(), stride.clone());
         Layout { shape, stride, contig : is_contiguous }
     }
+}
+
+impl Layout {
+/// Return iterator over tiles only
+pub fn tile_iter(&self, tiler: &Layout) -> LayoutIterator {
+    // Use flat_divide to flatten the layout
+    let flat = crate::layout_algebra::flat_divide(self, tiler);
+    let total_dims = match &flat.shape().dims {
+        crate::tuple::Tuple::Int(v) => v,
+        _ => panic!("flat_divide should return Int tuple"),
+    };
+
+    let tile_len = tiler.shape().flat_len();
+    let tile_dims: Vec<usize> = total_dims[..tile_len].to_vec(); // clone into owned Vec
+
+    LayoutIterator::new(tile_dims)
+}
+
+/// Return iterator over rest only
+pub fn rest_iter(&self, tiler: &Layout) -> LayoutIterator {
+    // Use flat_divide to flatten the layout
+    let flat = crate::layout_algebra::flat_divide(self, tiler);
+    let total_dims = match &flat.shape().dims {
+        crate::tuple::Tuple::Int(v) => v,
+        _ => panic!("flat_divide should return Int tuple"),
+    };
+
+    let tile_len = tiler.shape().flat_len();
+    let rest_dims: Vec<usize> = total_dims[tile_len..].to_vec(); // clone into owned Vec
+
+    LayoutIterator::new(rest_dims)
+}
+
 }
 
 /* ---------- stride helpers ---------- */
