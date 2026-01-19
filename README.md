@@ -2,6 +2,7 @@
 
 RutileLib is a Rust library for backend-agnostic tiled tensors, inspired by NVIDIA CuTe.
 
+Matrix Size: 4K x 4K X 256. Tile Size : 512 X 512
 <img width="715" height="570" alt="image" src="https://github.com/user-attachments/assets/f0472e2e-6610-4d1a-bd51-2c82bca4263b" />
 
 
