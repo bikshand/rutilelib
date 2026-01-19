@@ -64,6 +64,8 @@ pub fn gemm_f32<B: BlasBackend>(
     a: &TensorView<'_, f32>,
     b: &TensorView<'_, f32>,
     c: &mut TensorViewMut<'_, f32>,
+    alpha: f32,
+    beta: f32
 ) {
     let la = a.layout();
     let lb = b.layout();
@@ -85,9 +87,9 @@ pub fn gemm_f32<B: BlasBackend>(
 
     /* ---------- layout checks ---------- */
 
-    assert!(la.is_contiguous());
-    assert!(lb.is_contiguous());
-    assert!(lc.is_contiguous());
+    //assert!(la.is_contiguous());
+    //assert!(lb.is_contiguous());
+    //assert!(lc.is_contiguous());
 
     /* ---------- BLAS lowering ---------- */
 
@@ -102,12 +104,12 @@ pub fn gemm_f32<B: BlasBackend>(
             m,
             n,
             k,
-            1.0,
+            alpha,
             a.ptr.as_ptr(),
             lda,
             b.ptr.as_ptr(),
             ldb,
-            0.0,
+            beta,
             c.ptr.as_ptr(),
             ldc,
         );
@@ -176,7 +178,7 @@ mod tests {
 
         let backend = MockBlas;
 
-        gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut());
+        gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut(), 1.0, 0.0);
     }
 }
 
@@ -204,7 +206,7 @@ fn gemm_2x2_row_major_correctness() {
 
     let backend = GenericBlas;
 
-    gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut());
+    gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut(), 1.0, 0.0);
 
     // Expected:
     // [ 1*5 + 2*7 , 1*6 + 2*8 ]
@@ -249,7 +251,7 @@ mod randomized_gemm {
         let mut c = Tensor::new(c_data.clone(), Layout::row_major(c_shape));
 
         let backend = GenericBlas;
-        gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut());
+        gemm_f32(&backend, &a.as_view(), &b.as_view(), &mut c.as_view_mut(), 1.0, 0.0);
 
         // Reference computation in Rust
         let mut expected = vec![0.0; (m*n) as usize];

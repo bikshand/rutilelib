@@ -64,7 +64,7 @@ pub fn zipped_divide(layout: &Layout, tiler: &Layout) -> Layout {
         match (l, t) {
             (Tuple::Int(ldims), Tuple::Int(tdims)) => {
                 let tile = Tuple::Int(tdims.clone());
-                let rest = Tuple::Int(ldims.iter().zip(tdims.iter()).map(|(l_i, t_i)| l_i - t_i).collect());
+                let rest = Tuple::Int(ldims.iter().zip(tdims.iter()).map(|(l_i, t_i)| l_i / t_i).collect());
                 (tile, rest)
             }
             (Tuple::Tup(lv), Tuple::Tup(tv)) => {
@@ -149,7 +149,7 @@ mod tests {
         ])));
 
         let result = zipped_divide(&layout, &tiler);
-        assert_eq!(result.shape().to_string(), "((2,3),(6,3))");
+        assert_eq!(result.shape().to_string(), "((2,3),(4,2))");
     }
 
     #[test]
@@ -164,7 +164,7 @@ mod tests {
         ])));
 
         let result = tiled_divide(&layout, &tiler);
-        assert_eq!(result.shape().to_string(), "((2,3),6,3)");
+        assert_eq!(result.shape().to_string(), "((2,3),4,2)");
     }
 
     #[test]
@@ -179,7 +179,7 @@ mod tests {
         ])));
 
         let result = flat_divide(&layout, &tiler);
-        assert_eq!(result.shape().to_string(), "(2,3,6,3)");
+        assert_eq!(result.shape().to_string(), "(2,3,4,2)");
     }
 }
 

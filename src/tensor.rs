@@ -38,6 +38,17 @@ impl<T> Tensor<T> {
             _marker: PhantomData,
         }
     }
+
+    #[inline(always)]
+    pub fn data(&self) -> &[T] {
+        &self.data
+    }
+
+    #[inline(always)]
+    pub fn data_mut(&mut self) -> &mut [T] {
+        &mut self.data
+    }
+
 }
 
 /* ========================= TensorView ========================= */
@@ -73,6 +84,17 @@ impl<'a, T> TensorView<'a, T> {
     pub fn as_mut_ptr(&mut self) -> *mut T {
         self.ptr.as_ptr()
     }
+
+    /// Return raw pointer to element at logical index `idx`
+    ///
+    /// # Safety
+    /// Caller must ensure `idx` is in-bounds.
+    #[inline(always)]
+    pub unsafe fn ptr_at(&self, idx: &Tuple) -> *const T {
+        let offset = idx.dot(&self.layout.stride());
+        self.ptr.as_ptr().add(offset)
+    }
+
 
     /* ---------- N-D subview ---------- */
 
@@ -153,6 +175,16 @@ impl<'a, T> TensorViewMut<'a, T> {
         ]));
 
         self.subview_mut(&start, &shape)
+    }
+
+    /// Return raw mutable pointer to element at logical index `idx`
+    ///
+    /// # Safety
+    /// Caller must ensure `idx` is in-bounds and unique.
+    #[inline(always)]
+    pub unsafe fn ptr_at_mut(&self, idx: &Tuple) -> *mut T {
+        let offset = idx.dot(&self.layout.stride());
+        self.ptr.as_ptr().add(offset)
     }
 }
 

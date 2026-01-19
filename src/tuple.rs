@@ -79,17 +79,19 @@ impl Tuple {
         }
     }
 
-    /// Hierarchical dot product
+    /// Structure is ignored; both sides are flattened.
     pub fn dot(&self, other: &Tuple) -> usize {
-        match (self, other) {
-            (Tuple::Int(a), Tuple::Int(b)) => {
-                a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
-            }
-            (Tuple::Tup(a), Tuple::Tup(b)) => {
-                a.iter().zip(b.iter()).map(|(x, y)| x.dot(y)).sum()
-            }
-            _ => panic!("Tuple mismatch in dot"),
-        }
+        let a = self.flatten();
+        let b = other.flatten();
+
+        assert!(
+            a.len() == b.len(),
+            "Tuple::dot dimension mismatch: {:?} vs {:?}",
+            a,
+            b
+        );
+
+        a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
     }
 }
 
