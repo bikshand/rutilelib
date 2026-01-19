@@ -2,7 +2,7 @@
 
 RutileLib is a Rust library for backend-agnostic tiled tensors, inspired by NVIDIA CuTe.
 
-<img width="722" height="580" alt="image" src="https://github.com/user-attachments/assets/fddc6be8-5c0b-4f2c-9884-9dcb98930a5b" />
+<img width="715" height="570" alt="image" src="https://github.com/user-attachments/assets/f0472e2e-6610-4d1a-bd51-2c82bca4263b" />
 
 
 ## Goals
